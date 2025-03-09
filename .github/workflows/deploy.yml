@@ -1,0 +1,31 @@
+name: Deploy Streamlit App
+
+on:
+  push:
+    branches:
+      - main  # Runs on push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚀 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🌐 Deploy to Streamlit
+        run: |
+          streamlit deploy https://share.streamlit.io/YOUR_USERNAME/YOUR_REPO/main/dashboard.py
+        env:
+          STREAMLIT_EMAIL: ${{ secrets.STREAMLIT_EMAIL }}
+          STREAMLIT_PASSWORD: ${{ secrets.STREAMLIT_PASSWORD }}
