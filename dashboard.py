@@ -17,28 +17,48 @@ TOP_COMPANIES = {
     "Johnson & Johnson (JNJ)": "JNJ"
 }
 
-# ---- 2️⃣ Fetch Stock Data Function ----
+# ---- 2️⃣ Function to Fetch Stock Data ----
 
 
 @st.cache_data
-def get_stock_data(ticker):
+def get_stock_data(ticker, period="1mo"):
     stock = yf.Ticker(ticker)
-    hist = stock.history(period="1mo")  # Fetch last 1 month of data
-    return hist
+    return stock.history(period=period)
+
+# ---- 3️⃣ Function to Fetch Real-Time Data ----
 
 
-# ---- 3️⃣ Streamlit UI ----
+def get_realtime_data(ticker):
+    stock = yf.Ticker(ticker)
+    latest_data = stock.history(period="1d")  # Get today's data
+    return latest_data
+
+
+# ---- 4️⃣ Streamlit UI ----
 st.title("📊 Top 10 Companies Stock Market Dashboard with Candlestick Chart")
+
+# 🎯 **Green Button for Real-Time Data**
+col1, col2 = st.columns([0.8, 0.2])  # Layout
+with col2:
+    if st.button("⚡ Real-Time Data", key="real_time", help="Click to fetch latest stock data", use_container_width=True):
+        realtime = True
+    else:
+        realtime = False
 
 # Select a company from dropdown
 selected_company = st.selectbox(
     "Select a company:", list(TOP_COMPANIES.keys()))
 ticker_symbol = TOP_COMPANIES[selected_company]
 
-# Fetch data for selected stock
-historical_data = get_stock_data(ticker_symbol)
+# Fetch Data (Real-Time if Button Clicked)
+if realtime:
+    historical_data = get_realtime_data(ticker_symbol)
+    st.success("✅ Showing Real-Time Data")
+else:
+    historical_data = get_stock_data(ticker_symbol)
+    st.info("📅 Showing Last Month's Data")
 
-# ---- 4️⃣ Display Candlestick Chart ----
+# ---- 5️⃣ Display Candlestick Chart ----
 if not historical_data.empty:
     st.subheader(f"Candlestick Chart for {selected_company} ({ticker_symbol})")
 
@@ -48,30 +68,31 @@ if not historical_data.empty:
         high=historical_data["High"],
         low=historical_data["Low"],
         close=historical_data["Close"],
-        increasing_line_color="green",  # Bullish (price went up)
-        decreasing_line_color="red"     # Bearish (price went down)
+        increasing_line_color="green",
+        decreasing_line_color="red"
     )])
 
     fig.update_layout(
-        title=f"{selected_company} Stock Price (Last Month)",
+        title=f"{selected_company} Stock Price ({'Real-Time' if realtime else 'Last Month'})",
         xaxis_title="Date",
         yaxis_title="Price (USD)",
         xaxis_rangeslider_visible=False
     )
     st.plotly_chart(fig)
 
-    # ---- 5️⃣ Explanation Note ----
+    # ---- 6️⃣ Explanation Note ----
     st.markdown("""
     ### 📌 How to Read the Candlestick Chart:
-    - The **body** of each candle represents the difference between **open & close** prices.
-    - **Green (Bullish)** → The stock closed **higher** than it opened.
-    - **Red (Bearish)** → The stock closed **lower** than it opened.
-    - The **wicks (shadows)** show the **highest & lowest** prices of the day.
-    - Mastering this chart type helps in identifying **trading patterns & trends**.
+    - **Body** → Difference between **Open & Close** prices.
+    - **Green (Bullish)** → Closed **higher** than it opened.
+    - **Red (Bearish)** → Closed **lower** than it opened.
+    - **Wicks (shadows)** show **high & low** extremes.
+    - Understanding this chart helps in **trading pattern recognition**.
     """)
 
-    # ---- 6️⃣ Show Table of Stock Data ----
-    st.subheader("📊 Stock Data Table (Last Month)")
+    # ---- 7️⃣ Show Table of Stock Data ----
+    st.subheader(
+        f"📊 Stock Data Table ({'Real-Time' if realtime else 'Last Month'})")
     st.dataframe(
         historical_data[['Open', 'High', 'Low', 'Close', 'Volume']].reset_index())
 
