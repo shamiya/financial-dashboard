@@ -1,40 +1,63 @@
 import streamlit as st
 import yfinance as yf
+import pandas as pd
 import plotly.express as px
 
-# ---- 1️⃣ Fetch Stock Data Function ----
+# ---- 1️⃣ Define List of Top Companies ----
+TOP_COMPANIES = {
+    "Apple (AAPL)": "AAPL",
+    "Microsoft (MSFT)": "MSFT",
+    "NVIDIA (NVDA)": "NVDA",
+    "Alphabet (GOOG)": "GOOG",
+    "Amazon (AMZN)": "AMZN",
+    "Meta (META)": "META",
+    "Tesla (TSLA)": "TSLA",
+    "Berkshire Hathaway (BRK-B)": "BRK-B",
+    "UnitedHealth (UNH)": "UNH",
+    "Johnson & Johnson (JNJ)": "JNJ"
+}
+
+# ---- 2️⃣ Fetch Stock Data Function ----
 
 
 @st.cache_data
-def get_stock_data(ticker_symbol):
-    ticker = yf.Ticker(ticker_symbol)
-    historical_data = ticker.history(period="1y")
-    financials = ticker.financials
-    actions = ticker.actions
-    return historical_data, financials, actions
+def get_stock_data(ticker):
+    stock = yf.Ticker(ticker)
+    hist = stock.history(period="5d")  # Last 5 days of data
+    return hist
 
 
-# ---- 2️⃣ Streamlit UI ----
-st.title("📈 Stock Market Dashboard")
+# ---- 3️⃣ Streamlit UI ----
+st.title("📊 Top 10 Companies Stock Market Dashboard")
 
-# Select stock from dropdown
-stock_options = {"Apple (AAPL)": "AAPL", "Microsoft (MSFT)": "MSFT"}
-selected_stock = st.selectbox("Select a company:", list(stock_options.keys()))
+# ---- 4️⃣ Fetch Data for All Top Companies ----
+all_data = []
+for name, symbol in TOP_COMPANIES.items():
+    try:
+        data = get_stock_data(symbol)
+        if not data.empty:
+            latest_data = data.iloc[-1]  # Get latest day's data
+            all_data.append([
+                name, symbol, latest_data["Open"], latest_data["High"],
+                latest_data["Low"], latest_data["Close"], latest_data["Volume"]
+            ])
+    except Exception as e:
+        st.error(f"Error fetching {symbol}: {e}")
 
-# Fetch data for selected stock
-ticker_symbol = stock_options[selected_stock]
-historical_data, financials, actions = get_stock_data(ticker_symbol)
+# ---- 5️⃣ Create DataFrame ----
+columns = ["Company", "Ticker", "Open", "High", "Low", "Close", "Volume"]
+df = pd.DataFrame(all_data, columns=columns)
 
-# ---- 3️⃣ Stock Price Chart ----
-st.subheader(f"{selected_stock} Stock Price (Last Year)")
-fig = px.line(historical_data, x=historical_data.index,
-              y="Close", title=f"{ticker_symbol} Closing Prices")
+# ---- 6️⃣ Sorting & Ranking ----
+ranking_metric = st.selectbox(
+    "Rank by:", ["Open", "High", "Low", "Close", "Volume"])
+df_sorted = df.sort_values(
+    by=ranking_metric, ascending=False).reset_index(drop=True)
+
+# ---- 7️⃣ Display Data ----
+st.dataframe(df_sorted)
+
+# ---- 8️⃣ Plot Graph ----
+fig = px.bar(df_sorted, x="Company", y=ranking_metric, color="Company",
+             title=f"Top 10 Companies Ranked by {ranking_metric}")
 st.plotly_chart(fig)
-
-# ---- 4️⃣ Financials Table ----
-st.subheader(f"{selected_stock} Financials")
-st.write(financials if not financials.empty else "No financial data available.")
-
-# ---- 5️⃣ Stock Actions (Dividends & Splits) ----
-st.subheader(f"{selected_stock} Dividends & Splits")
-st.write(actions if not actions.empty else "No dividend or stock split data available.")
