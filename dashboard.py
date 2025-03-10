@@ -1,7 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 
 # ---- 1️⃣ Define List of Top Companies ----
 TOP_COMPANIES = {
@@ -23,41 +23,38 @@ TOP_COMPANIES = {
 @st.cache_data
 def get_stock_data(ticker):
     stock = yf.Ticker(ticker)
-    hist = stock.history(period="5d")  # Last 5 days of data
+    hist = stock.history(period="1mo")  # Fetch last 1 month of data
     return hist
 
 
 # ---- 3️⃣ Streamlit UI ----
-st.title("📊 Top 10 Companies Stock Market Dashboard")
+st.title("📊 Top 10 Companies Stock Market Dashboard with Candlestick Chart")
 
-# ---- 4️⃣ Fetch Data for All Top Companies ----
-all_data = []
-for name, symbol in TOP_COMPANIES.items():
-    try:
-        data = get_stock_data(symbol)
-        if not data.empty:
-            latest_data = data.iloc[-1]  # Get latest day's data
-            all_data.append([
-                name, symbol, latest_data["Open"], latest_data["High"],
-                latest_data["Low"], latest_data["Close"], latest_data["Volume"]
-            ])
-    except Exception as e:
-        st.error(f"Error fetching {symbol}: {e}")
+# Select a company from dropdown
+selected_company = st.selectbox(
+    "Select a company:", list(TOP_COMPANIES.keys()))
+ticker_symbol = TOP_COMPANIES[selected_company]
 
-# ---- 5️⃣ Create DataFrame ----
-columns = ["Company", "Ticker", "Open", "High", "Low", "Close", "Volume"]
-df = pd.DataFrame(all_data, columns=columns)
+# Fetch data for selected stock
+historical_data = get_stock_data(ticker_symbol)
 
-# ---- 6️⃣ Sorting & Ranking ----
-ranking_metric = st.selectbox(
-    "Rank by:", ["Open", "High", "Low", "Close", "Volume"])
-df_sorted = df.sort_values(
-    by=ranking_metric, ascending=False).reset_index(drop=True)
+# ---- 4️⃣ Display Candlestick Chart ----
+if not historical_data.empty:
+    st.subheader(f"Candlestick Chart for {selected_company} ({ticker_symbol})")
 
-# ---- 7️⃣ Display Data ----
-st.dataframe(df_sorted)
+    fig = go.Figure(data=[go.Candlestick(
+        x=historical_data.index,
+        open=historical_data["Open"],
+        high=historical_data["High"],
+        low=historical_data["Low"],
+        close=historical_data["Close"],
+        increasing_line_color="green",  # Bullish (price went up)
+        decreasing_line_color="red"     # Bearish (price went down)
+    )])
 
-# ---- 8️⃣ Plot Graph ----
-fig = px.bar(df_sorted, x="Company", y=ranking_metric, color="Company",
-             title=f"Top 10 Companies Ranked by {ranking_metric}")
-st.plotly_chart(fig)
+    fig.update_layout(title=f"{selected_company} Stock Price (Last Month)",
+                      xaxis_title="Date", yaxis_title="Price (USD)", xaxis_rangeslider_visible=False)
+    st.plotly_chart(fig)
+
+else:
+    st.warning("No data available for the selected company.")
