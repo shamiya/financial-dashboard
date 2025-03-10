@@ -52,9 +52,28 @@ if not historical_data.empty:
         decreasing_line_color="red"     # Bearish (price went down)
     )])
 
-    fig.update_layout(title=f"{selected_company} Stock Price (Last Month)",
-                      xaxis_title="Date", yaxis_title="Price (USD)", xaxis_rangeslider_visible=False)
+    fig.update_layout(
+        title=f"{selected_company} Stock Price (Last Month)",
+        xaxis_title="Date",
+        yaxis_title="Price (USD)",
+        xaxis_rangeslider_visible=False
+    )
     st.plotly_chart(fig)
+
+    # ---- 5️⃣ Explanation Note ----
+    st.markdown("""
+    ### 📌 How to Read the Candlestick Chart:
+    - The **body** of each candle represents the difference between **open & close** prices.
+    - **Green (Bullish)** → The stock closed **higher** than it opened.
+    - **Red (Bearish)** → The stock closed **lower** than it opened.
+    - The **wicks (shadows)** show the **highest & lowest** prices of the day.
+    - Mastering this chart type helps in identifying **trading patterns & trends**.
+    """)
+
+    # ---- 6️⃣ Show Table of Stock Data ----
+    st.subheader("📊 Stock Data Table (Last Month)")
+    st.dataframe(
+        historical_data[['Open', 'High', 'Low', 'Close', 'Volume']].reset_index())
 
 else:
     st.warning("No data available for the selected company.")
